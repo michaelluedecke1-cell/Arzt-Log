@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MedLog Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966327.png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root { --primary: #007bff; --bg: #f4f7f6; --text: #333; --success: #28a745; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { background: white; padding: 10px 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100; flex-shrink: 0; }
+        .scroll-area { flex: 1; overflow-y: auto; padding: 10px 15px; -webkit-overflow-scrolling: touch; }
+        .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px; }
+        input, textarea, select { width: 100%; margin: 4px 0; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 15px; font-family: inherit; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .toolbar { display: flex; gap: 5px; margin-top: 8px; }
+        .btn-tool { flex: 1; font-size: 11px; padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .search-bar { border: 2px solid var(--primary) !important; background: #fff; margin-top: 8px !important; }
+        .entry-card { border-left: 4px solid var(--primary); }
+        .tag { background: #e7f3ff; color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .date-text { font-size: 12px; color: #666; font-weight: bold; }
+        .entry-title { font-weight: bold; margin: 4px 0; font-size: 16px; }
+        .entry-detail { font-size: 13px; color: #444; margin-bottom: 2px; }
+        .action-area { display: flex; gap: 8px; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
+        .btn-small { flex: 1; padding: 6px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-edit { background: #fff3cd; color: #856404; }
+        .btn-delete { background: #f8d7da; color: #721c24; }
+        #file-input { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin:0; font-size: 16px; color: var(--primary);">🏥 MedLog Pro</h3>
+        <span id="counter" style="font-size: 11px; color: #888;">0 Einträge</span>
+    </div>
+    <div id="form-container">
+        <input type="hidden" id="edit-index" value="-1">
+        <div style="display: flex; gap: 5px;">
+            <input type="date" id="datum">
+            <select id="kategorie">
+                <option value="Hausarzt">Hausarzt</option>
+                <option value="Zahnarzt">Zahnarzt</option>
+                <option value="Facharzt">Facharzt</option>
+                <option value="Klinik">Klinik</option>
+                <option value="Sonstiges">Sonstiges</option>
+            </select>
+        </div>
+        <input type="text" id="arzt" placeholder="Name des Arztes / Praxis">
+        <input type="text" id="diagnose" placeholder="Diagnose / Grund">
+        <textarea id="behandlung" placeholder="Was wurde gemacht?" rows="1" oninput='this.style.height = "";this.style.height = this.scrollHeight + "px"'></textarea>
+        <button id="save-btn" class="btn-main" onclick="speichern()">Speichern</button>
+    </div>
+    <div class="toolbar">
+        <button class="btn-tool" onclick="exportPDF()">📄 PDF</button>
+        <button class="btn-tool" onclick="exportJSON()">💾 Backup</button>
+        <button class="btn-tool" style="background:var(--success)" onclick="document.getElementById('file-input').click()">📥 Import</button>
+    </div>
+    <input type="text" id="suche" class="search-bar" placeholder="🔍 Suchen...">
+    <input type="file" id="file-input" accept=".json" onchange="importJSON(event)">
+</header>
+
+<div class="scroll-area">
+    <div id="liste"></div>
+</div>
+
+<script>
+    let termine = JSON.parse(localStorage.getItem('termine')) || [];
+
+    // Service Worker Registrierung
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log("SW Fehler", err));
+    }
+
+    function anzeigen() {
+        const liste = document.getElementById('liste');
+        const suchbegriff = document.getElementById('suche').value.toLowerCase();
+        liste.innerHTML = "";
+        const gefiltert = termine.filter(t => t.arzt.toLowerCase().includes(suchbegriff) || (t.diagnose && t.diagnose.toLowerCase().includes(suchbegriff)));
+        gefiltert.sort((a, b) => new Date(b.datum) - new Date(a.datum));
+        document.getElementById('counter').innerText = `${gefiltert.length} Einträge`;
+        gefiltert.forEach((t) => {
+            const realIndex = termine.indexOf(t);
+            liste.innerHTML += `<div class="card entry-card"><div style="display:flex; justify-content:space-between"><span class="tag">${t.kategorie}</span><span class="date-text">${formatDate(t.datum)}</span></div><div class="entry-title">${t.arzt}</div>${t.diagnose ? `<div class="entry-detail"><b>D:</b> ${t.diagnose}</div>` : ''}<div class="action-area"><button class="btn-small btn-edit" onclick="bearbeiten(${realIndex})">Ändern</button><button class="btn-small btn-delete" onclick="loeschen(${realIndex})">Löschen</button></div></div>`;
+        });
+    }
+
+    function speichern() {
+        const index = document.getElementById('edit-index').value;
+        const t = { datum: document.getElementById('datum').value || new Date().toISOString().split('T')[0], kategorie: document.getElementById('kategorie').value, arzt: document.getElementById('arzt').value, diagnose: document.getElementById('diagnose').value, behandlung: document.getElementById('behandlung').value };
+        if (!t.arzt) return alert("Arzt fehlt");
+        if (index === "-1") termine.push(t); else termine[index] = t;
+        localStorage.setItem('termine', JSON.stringify(termine));
+        location.reload(); // Einfachster Weg für UI Refresh
+    }
+
+    function bearbeiten(index) {
+        const t = termine[index];
+        document.getElementById('datum').value = t.datum;
+        document.getElementById('arzt').value = t.arzt;
+        document.getElementById('edit-index').value = index;
+        document.getElementById('save-btn').innerText = "Update";
+        window.scrollTo(0,0);
+    }
+
+    function loeschen(index) { if(confirm("Löschen?")) { termine.splice(index,1); localStorage.setItem('termine', JSON.stringify(termine)); anzeigen(); } }
+    function formatDate(d) { const s = d.split("-"); return `${s[2]}.${s[1]}.${s[0]}`; }
+    function exportJSON() { const blob = new Blob([JSON.stringify(termine)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
+    function importJSON(e) { const reader = new FileReader(); reader.onload=(ev)=>{termine=JSON.parse(ev.target.result); localStorage.setItem('termine', JSON.stringify(termine)); anzeigen();}; reader.readAsText(e.target.files[0]); }
+    function exportPDF() { const {jsPDF}=window.jspdf; const doc=new jsPDF(); doc.text("Termine",10,10); let y=20; termine.forEach(t=>{doc.text(`${t.datum}: ${t.arzt}`,10,y); y+=10;}); doc.save("termine.pdf"); }
+
+    document.getElementById('suche').onkeyup = anzeigen;
+    anzeigen();
+</script>
+
+</body>
+</html>
+
