@@ -84,20 +84,47 @@
         const liste = document.getElementById('liste');
         const suchbegriff = document.getElementById('suche').value.toLowerCase();
         liste.innerHTML = "";
+        
         const gefiltert = termine.filter(t => t.arzt.toLowerCase().includes(suchbegriff) || (t.diagnose && t.diagnose.toLowerCase().includes(suchbegriff)));
         gefiltert.sort((a, b) => new Date(b.datum) - new Date(a.datum));
         document.getElementById('counter').innerText = `${gefiltert.length} Einträge`;
+        
         gefiltert.forEach((t) => {
             const realIndex = termine.indexOf(t);
-            liste.innerHTML += `<div class="card entry-card"><div style="display:flex; justify-content:space-between"><span class="tag">${t.kategorie}</span><span class="date-text">${formatDate(t.datum)}</span></div><div class="entry-title">${t.arzt}</div>${t.diagnose ? `<div class="entry-detail"><b>D:</b> ${t.diagnose}</div>` : ''}<div class="action-area"><button class="btn-small btn-edit" onclick="bearbeiten(${realIndex})">Ändern</button><button class="btn-small btn-delete" onclick="loeschen(${realIndex})">Löschen</button></div></div>`;
+            liste.innerHTML += `<div class="card entry-card">
+                <div style="display:flex; justify-content:space-between">
+                    <span class="tag">${t.kategorie}</span>
+                    <span class="date-text">${formatDate(t.datum)}</span>
+                </div>
+                <div class="entry-title">${t.arzt}</div>
+                ${t.diagnose ? `<div class="entry-detail"><b>D:</b> ${t.diagnose}</div>` : ''}
+                ${t.behandlung ? `<div class="entry-detail" style="margin-top: 4px;"><b>Behandlung:</b> ${t.behandlung}</div>` : ''}
+                <div class="action-area">
+                    <button class="btn-small btn-edit" onclick="bearbeiten(${realIndex})">Ändern</button>
+                    <button class="btn-small btn-delete" onclick="loeschen(${realIndex})">Löschen</button>
+                </div>
+            </div>`;
         });
     }
 
     function speichern() {
         const index = document.getElementById('edit-index').value;
-        const t = { datum: document.getElementById('datum').value || new Date().toISOString().split('T')[0], kategorie: document.getElementById('kategorie').value, arzt: document.getElementById('arzt').value, diagnose: document.getElementById('diagnose').value, behandlung: document.getElementById('behandlung').value };
+        const t = { 
+            datum: document.getElementById('datum').value || new Date().toISOString().split('T')[0], 
+            kategorie: document.getElementById('kategorie').value, 
+            arzt: document.getElementById('arzt').value, 
+            diagnose: document.getElementById('diagnose').value, 
+            behandlung: document.getElementById('behandlung').value 
+        };
+        
         if (!t.arzt) return alert("Arzt fehlt");
-        if (index === "-1") termine.push(t); else termine[index] = t;
+        
+        if (index === "-1") {
+            termine.push(t); 
+        } else {
+            termine[index] = t;
+        }
+        
         localStorage.setItem('termine', JSON.stringify(termine));
         location.reload(); // Einfachster Weg für UI Refresh
     }
@@ -105,16 +132,29 @@
     function bearbeiten(index) {
         const t = termine[index];
         document.getElementById('datum').value = t.datum;
+        document.getElementById('kategorie').value = t.kategorie || "Hausarzt";
         document.getElementById('arzt').value = t.arzt;
+        document.getElementById('diagnose').value = t.diagnose || "";
+        document.getElementById('behandlung').value = t.behandlung || "";
         document.getElementById('edit-index').value = index;
         document.getElementById('save-btn').innerText = "Update";
         window.scrollTo(0,0);
     }
 
-    function loeschen(index) { if(confirm("Löschen?")) { termine.splice(index,1); localStorage.setItem('termine', JSON.stringify(termine)); anzeigen(); } }
+    function loeschen(index) { 
+        if(confirm("Löschen?")) { 
+            termine.splice(index,1); 
+            localStorage.setItem('termine', JSON.stringify(termine)); 
+            anzeigen(); 
+        } 
+    }
+    
     function formatDate(d) { const s = d.split("-"); return `${s[2]}.${s[1]}.${s[0]}`; }
+    
     function exportJSON() { const blob = new Blob([JSON.stringify(termine)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
+    
     function importJSON(e) { const reader = new FileReader(); reader.onload=(ev)=>{termine=JSON.parse(ev.target.result); localStorage.setItem('termine', JSON.stringify(termine)); anzeigen();}; reader.readAsText(e.target.files[0]); }
+    
     function exportPDF() { const {jsPDF}=window.jspdf; const doc=new jsPDF(); doc.text("Termine",10,10); let y=20; termine.forEach(t=>{doc.text(`${t.datum}: ${t.arzt}`,10,y); y+=10;}); doc.save("termine.pdf"); }
 
     document.getElementById('suche').onkeyup = anzeigen;
@@ -123,4 +163,3 @@
 
 </body>
 </html>
-
