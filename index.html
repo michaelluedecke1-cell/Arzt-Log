@@ -2,164 +2,338 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MedLog Pro</title>
-    
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#007bff">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966327.png">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="apple-touch-icon" href="icon-192.png">
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --primary: #007bff; --bg: #f4f7f6; --text: #333; --success: #28a745; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { background: white; padding: 10px 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100; flex-shrink: 0; }
-        .scroll-area { flex: 1; overflow-y: auto; padding: 10px 15px; -webkit-overflow-scrolling: touch; }
-        .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px; }
-        input, textarea, select { width: 100%; margin: 4px 0; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 15px; font-family: inherit; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .toolbar { display: flex; gap: 5px; margin-top: 8px; }
-        .btn-tool { flex: 1; font-size: 11px; padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .search-bar { border: 2px solid var(--primary) !important; background: #fff; margin-top: 8px !important; }
-        .entry-card { border-left: 4px solid var(--primary); }
-        .tag { background: #e7f3ff; color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .date-text { font-size: 12px; color: #666; font-weight: bold; }
-        .entry-title { font-weight: bold; margin: 4px 0; font-size: 16px; }
-        .entry-detail { font-size: 13px; color: #444; margin-bottom: 2px; }
-        .action-area { display: flex; gap: 8px; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
-        .btn-small { flex: 1; padding: 6px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
-        .btn-edit { background: #fff3cd; color: #856404; }
-        .btn-delete { background: #f8d7da; color: #721c24; }
-        #file-input { display: none; }
+        :root { 
+            --primary: #007bff; 
+            --bg: #f4f7f6; 
+            --nav-h: 60px;
+        }
+
+        html, body { 
+            height: 100%;
+            width: 100%;
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+            background: var(--bg);
+            font-family: sans-serif;
+            overscroll-behavior: none;
+        }
+
+        .top-nav { 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--nav-h);
+            display: flex; 
+            background: white; 
+            border-bottom: 2px solid #ddd; 
+            z-index: 1000;
+        }
+
+        .nav-btn { 
+            flex: 1; 
+            border: none; 
+            background: none; 
+            font-weight: bold; 
+            font-size: 16px; 
+            color: #666; 
+        }
+
+        .nav-btn.active { 
+            color: var(--primary); 
+            border-bottom: 4px solid var(--primary); 
+            background: #f0f7ff; 
+        }
+
+        .container { 
+            position: absolute;
+            top: var(--nav-h);
+            bottom: 0;
+            left: 0;
+            right: 0;
+            overflow-y: scroll; 
+            -webkit-overflow-scrolling: touch; 
+            padding: 15px;
+            overscroll-behavior-y: contain;
+        }
+
+        .page { display: none; width: 100%; }
+        .page.active { display: block; }
+
+        .card { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            margin-bottom: 15px; 
+        }
+
+        label { font-weight: bold; font-size: 14px; color: #555; }
+        input, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 5px 0 15px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            font-size: 16px; 
+        }
+        
+        .btn-save { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 18px; font-weight: bold; }
+        .btn-tool { padding: 12px; border: none; border-radius: 5px; color: white; font-size: 14px; margin-bottom: 10px; width: 100%; font-weight: bold; }
+
+        .entry { border-left: 5px solid var(--primary); margin-bottom: 10px; padding: 12px; background: #fff; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .entry-date { font-size: 12px; color: #666; font-weight: bold; }
+        .action-btns { display: flex; gap: 15px; margin-top: 10px; }
+        .btn-edit { color: var(--primary); border: none; background: none; font-weight: bold; }
+        .btn-del { color: red; border: none; background: none; }
+        
+        #searchBar { 
+            border: 2px solid var(--primary); 
+            background: #fff; 
+            width: 100%;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
 
-<header>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="margin:0; font-size: 16px; color: var(--primary);">🏥 MedLog Pro</h3>
-        <span id="counter" style="font-size: 11px; color: #888;">0 Einträge</span>
-    </div>
-    <div id="form-container">
-        <input type="hidden" id="edit-index" value="-1">
-        <div style="display: flex; gap: 5px;">
-            <input type="date" id="datum">
-            <select id="kategorie">
-                <option value="Hausarzt">Hausarzt</option>
-                <option value="Zahnarzt">Zahnarzt</option>
-                <option value="Facharzt">Facharzt</option>
-                <option value="Klinik">Klinik</option>
-                <option value="Sonstiges">Sonstiges</option>
-            </select>
-        </div>
-        <input type="text" id="arzt" placeholder="Name des Arztes / Praxis">
-        <input type="text" id="diagnose" placeholder="Diagnose / Grund">
-        <textarea id="behandlung" placeholder="Was wurde gemacht?" rows="1" oninput='this.style.height = "";this.style.height = this.scrollHeight + "px"'></textarea>
-        <button id="save-btn" class="btn-main" onclick="speichern()">Speichern</button>
-    </div>
-    <div class="toolbar">
-        <button class="btn-tool" onclick="exportPDF()">📄 PDF</button>
-        <button class="btn-tool" onclick="exportJSON()">💾 Backup</button>
-        <button class="btn-tool" style="background:var(--success)" onclick="document.getElementById('file-input').click()">📥 Import</button>
-    </div>
-    <input type="text" id="suche" class="search-bar" placeholder="🔍 Suchen...">
-    <input type="file" id="file-input" accept=".json" onchange="importJSON(event)">
-</header>
+<div class="top-nav">
+    <button class="nav-btn active" id="btn0" onclick="tabs(0)">📝 EINGABE</button>
+    <button class="nav-btn" id="btn1" onclick="tabs(1)">📋 AUSGABE</button>
+</div>
 
-<div class="scroll-area">
-    <div id="liste"></div>
+<div class="container" id="scrollContainer">
+    <div id="p0" class="page active">
+        <div class="card">
+            <h4 id="form-title" style="margin:0 0 10px 0">Neuer Eintrag</h4>
+            <input type="hidden" id="edit-idx" value="-1">
+            <label>Datum</label>
+            <input type="date" id="datum">
+            <label>Arzt / Praxis</label>
+            <input type="text" id="arzt" placeholder="Name">
+            <label>Behandlung</label>
+            <textarea id="notiz" rows="4" placeholder="Was wurde gemacht?"></textarea>
+            <button id="main-btn" class="btn-save" onclick="save()">Speichern</button>
+            <button id="cancel-btn" style="display:none; background:none; border:none; color:grey; width:100%; margin-top:10px;" onclick="resetForm()">Abbrechen</button>
+        </div>
+        <div class="card" style="background: #eee;">
+            <b>Sicherung:</b><br><br>
+            <button class="btn-tool" style="background:#6c757d" onclick="download()">💾 Backup erstellen</button>
+            <button class="btn-tool" style="background:#28a745" onclick="document.getElementById('f').click()">📥 Backup laden</button>
+            <input type="file" id="f" style="display:none" onchange="upload(event)">
+        </div>
+    </div>
+
+    <div id="p1" class="page">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin:0;">Verlauf</h3>
+            <button onclick="pdf()" style="padding:8px; border-radius:5px; background:white; border:1px solid #ccc;">📄 PDF</button>
+        </div>
+        <input type="text" id="searchBar" placeholder="Suchen..." onkeyup="render()">
+        <div id="liste"></div>
+    </div>
 </div>
 
 <script>
-    let termine = JSON.parse(localStorage.getItem('termine')) || [];
+    const DB_NAME = "MedLogDB";
+    const STORE_NAME = "eintraege";
+    let db;
 
     // Service Worker Registrierung
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log("SW Fehler", err));
-    }
-
-    function anzeigen() {
-        const liste = document.getElementById('liste');
-        const suchbegriff = document.getElementById('suche').value.toLowerCase();
-        liste.innerHTML = "";
-        
-        const gefiltert = termine.filter(t => t.arzt.toLowerCase().includes(suchbegriff) || (t.diagnose && t.diagnose.toLowerCase().includes(suchbegriff)));
-        gefiltert.sort((a, b) => new Date(b.datum) - new Date(a.datum));
-        document.getElementById('counter').innerText = `${gefiltert.length} Einträge`;
-        
-        gefiltert.forEach((t) => {
-            const realIndex = termine.indexOf(t);
-            liste.innerHTML += `<div class="card entry-card">
-                <div style="display:flex; justify-content:space-between">
-                    <span class="tag">${t.kategorie}</span>
-                    <span class="date-text">${formatDate(t.datum)}</span>
-                </div>
-                <div class="entry-title">${t.arzt}</div>
-                ${t.diagnose ? `<div class="entry-detail"><b>D:</b> ${t.diagnose}</div>` : ''}
-                ${t.behandlung ? `<div class="entry-detail" style="margin-top: 4px;"><b>Behandlung:</b> ${t.behandlung}</div>` : ''}
-                <div class="action-area">
-                    <button class="btn-small btn-edit" onclick="bearbeiten(${realIndex})">Ändern</button>
-                    <button class="btn-small btn-delete" onclick="loeschen(${realIndex})">Löschen</button>
-                </div>
-            </div>`;
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log("SW error", err));
         });
     }
 
-    function speichern() {
-        const index = document.getElementById('edit-index').value;
-        const t = { 
-            datum: document.getElementById('datum').value || new Date().toISOString().split('T')[0], 
-            kategorie: document.getElementById('kategorie').value, 
-            arzt: document.getElementById('arzt').value, 
-            diagnose: document.getElementById('diagnose').value, 
-            behandlung: document.getElementById('behandlung').value 
-        };
-        
-        if (!t.arzt) return alert("Arzt fehlt");
-        
-        if (index === "-1") {
-            termine.push(t); 
-        } else {
-            termine[index] = t;
+    async function initDB() {
+        return new Promise((resolve) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+                }
+            };
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                migrateOldData().then(() => {
+                    render();
+                    resolve();
+                });
+            };
+        });
+    }
+
+    async function migrateOldData() {
+        const oldData = JSON.parse(localStorage.getItem('med_db')) || JSON.parse(localStorage.getItem('termine'));
+        if (oldData && Array.isArray(oldData)) {
+            for (const item of oldData) {
+                await addEntry({ d: item.d || item.datum, a: item.a || item.arzt, n: item.n || item.behandlung || item.diagnose });
+            }
+            localStorage.removeItem('med_db');
+            localStorage.removeItem('termine');
         }
-        
-        localStorage.setItem('termine', JSON.stringify(termine));
-        location.reload(); // Einfachster Weg für UI Refresh
     }
 
-    function bearbeiten(index) {
-        const t = termine[index];
-        document.getElementById('datum').value = t.datum;
-        document.getElementById('kategorie').value = t.kategorie || "Hausarzt";
-        document.getElementById('arzt').value = t.arzt;
-        document.getElementById('diagnose').value = t.diagnose || "";
-        document.getElementById('behandlung').value = t.behandlung || "";
-        document.getElementById('edit-index').value = index;
-        document.getElementById('save-btn').innerText = "Update";
-        window.scrollTo(0,0);
+    async function addEntry(entry) {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        return tx.objectStore(STORE_NAME).add(entry);
     }
 
-    function loeschen(index) { 
-        if(confirm("Löschen?")) { 
-            termine.splice(index,1); 
-            localStorage.setItem('termine', JSON.stringify(termine)); 
-            anzeigen(); 
-        } 
+    async function updateEntry(id, entry) {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        entry.id = id;
+        return tx.objectStore(STORE_NAME).put(entry);
     }
-    
-    function formatDate(d) { const s = d.split("-"); return `${s[2]}.${s[1]}.${s[0]}`; }
-    
-    function exportJSON() { const blob = new Blob([JSON.stringify(termine)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
-    
-    function importJSON(e) { const reader = new FileReader(); reader.onload=(ev)=>{termine=JSON.parse(ev.target.result); localStorage.setItem('termine', JSON.stringify(termine)); anzeigen();}; reader.readAsText(e.target.files[0]); }
-    
-    function exportPDF() { const {jsPDF}=window.jspdf; const doc=new jsPDF(); doc.text("Termine",10,10); let y=20; termine.forEach(t=>{doc.text(`${t.datum}: ${t.arzt}`,10,y); y+=10;}); doc.save("termine.pdf"); }
 
-    document.getElementById('suche').onkeyup = anzeigen;
-    anzeigen();
+    async function getAllEntries() {
+        return new Promise(r => {
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const req = tx.objectStore(STORE_NAME).getAll();
+            req.onsuccess = () => r(req.result);
+        });
+    }
+
+    function tabs(n) {
+        document.getElementById('p0').classList.toggle('active', n === 0);
+        document.getElementById('p1').classList.toggle('active', n === 1);
+        document.getElementById('btn0').classList.toggle('active', n === 0);
+        document.getElementById('btn1').classList.toggle('active', n === 1);
+        setTimeout(() => { document.getElementById('scrollContainer').scrollTop = 0; }, 10);
+        if (n === 1) render();
+    }
+
+    async function render() {
+        const div = document.getElementById('liste');
+        const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+        div.innerHTML = "";
+        let data = await getAllEntries();
+        data.sort((a, b) => new Date(b.d) - new Date(a.d));
+        if (searchTerm) {
+            data = data.filter(i => (i.a||"").toLowerCase().includes(searchTerm) || (i.n||"").toLowerCase().includes(searchTerm));
+        }
+        if (data.length === 0) {
+            div.innerHTML = "<p style='text-align:center; color:#888;'>Keine Einträge.</p>";
+            return;
+        }
+        data.forEach(item => {
+            const d = (item.d || "").split('-').reverse().join('.');
+            div.innerHTML += `
+                <div class="entry">
+                    <div class="entry-date">${d}</div>
+                    <div style="font-weight:bold; font-size:18px;">${item.a}</div>
+                    <div style="margin-top:5px; color:#444;">${item.n}</div>
+                    <div class="action-btns">
+                        <button class="btn-edit" onclick='prepareEdit(${JSON.stringify(item)})'>Edit</button>
+                        <button class="btn-del" onclick="del(${item.id})">Löschen</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    async function save() {
+        const a = document.getElementById('arzt').value;
+        const d = document.getElementById('datum').value;
+        const n = document.getElementById('notiz').value;
+        const id = parseInt(document.getElementById('edit-idx').value);
+        if (!a) return alert("Arzt fehlt!");
+        const entry = { a, d, n };
+        if (id === -1) await addEntry(entry);
+        else await updateEntry(id, entry);
+        resetForm();
+        tabs(1);
+    }
+
+    function prepareEdit(item) {
+        document.getElementById('datum').value = item.d;
+        document.getElementById('arzt').value = item.a;
+        document.getElementById('notiz').value = item.n;
+        document.getElementById('edit-idx').value = item.id;
+        document.getElementById('form-title').innerText = "Ändern";
+        document.getElementById('main-btn').innerText = "Update";
+        document.getElementById('cancel-btn').style.display = "block";
+        tabs(0);
+    }
+
+    async function del(id) {
+        if (confirm("Löschen?")) {
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).delete(id);
+            tx.oncomplete = () => render();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('edit-idx').value = "-1";
+        document.getElementById('arzt').value = "";
+        document.getElementById('notiz').value = "";
+        document.getElementById('datum').value = new Date().toISOString().split('T')[0];
+        document.getElementById('form-title').innerText = "Neuer Eintrag";
+        document.getElementById('main-btn').innerText = "Speichern";
+        document.getElementById('cancel-btn').style.display = "none";
+    }
+
+    async function download() {
+        const data = await getAllEntries();
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `medlog_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+
+    async function upload(e) {
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            try {
+                const imported = JSON.parse(ev.target.result);
+                const existing = await getAllEntries();
+                let neu = 0;
+                for (const item of imported) {
+                    const isDup = existing.some(old => old.d === item.d && old.a === item.a && old.n === item.n);
+                    if (!isDup) { delete item.id; await addEntry(item); neu++; }
+                }
+                alert(neu + " Einträge geladen.");
+                render();
+            } catch (err) { alert("Fehler beim Import."); }
+        };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    async function pdf() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const data = await getAllEntries();
+        data.sort((a, b) => new Date(b.d) - new Date(a.d));
+        doc.text("Medizinischer Verlauf", 10, 15);
+        let y = 30;
+        data.forEach(t => {
+            const dStr = (t.d || "").split('-').reverse().join('.');
+            if (y > 270) { doc.addPage(); y = 20; }
+            doc.setFont(undefined, 'bold'); doc.text(dStr + ": " + t.a, 10, y);
+            y += 7; doc.setFont(undefined, 'normal');
+            const lines = doc.splitTextToSize(t.n || "-", 180);
+            doc.text(lines, 10, y); y += (lines.length * 6) + 10;
+        });
+        doc.save("verlauf.pdf");
+    }
+
+    initDB();
+    document.getElementById('datum').value = new Date().toISOString().split('T')[0];
 </script>
-
 </body>
 </html>
+
