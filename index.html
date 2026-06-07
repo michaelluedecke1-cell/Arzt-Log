@@ -6,7 +6,7 @@
     <title>MedLog Pro</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007bff">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link class="apple-touch-icon" href="icon-192.png">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -44,8 +44,9 @@
             border: none; 
             background: none; 
             font-weight: bold; 
-            font-size: 16px; 
+            font-size: 14px; 
             color: #666; 
+            padding: 0 5px;
         }
 
         .nav-btn.active { 
@@ -85,6 +86,12 @@
             border: 1px solid #ccc; 
             border-radius: 8px; 
             font-size: 16px; 
+            box-sizing: border-box;
+        }
+
+        #notiz {
+            min-height: 180px;
+            resize: vertical;
         }
         
         .btn-save { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 18px; font-weight: bold; }
@@ -112,6 +119,7 @@
 <div class="top-nav">
     <button class="nav-btn active" id="btn0" onclick="tabs(0)">📝 EINGABE</button>
     <button class="nav-btn" id="btn1" onclick="tabs(1)">📋 AUSGABE</button>
+    <button class="nav-btn" id="btn2" onclick="tabs(2)">💾 BACKUP</button>
 </div>
 
 <div class="container" id="scrollContainer">
@@ -122,17 +130,13 @@
             <label>Datum</label>
             <input type="date" id="datum">
             <label>Arzt / Praxis</label>
-            <input type="text" id="arzt" placeholder="Name">
+            <input type="text" id="arzt" placeholder="Name" list="arzt-liste" autocomplete="off">
+            <datalist id="arzt-liste"></datalist>
+            
             <label>Behandlung</label>
-            <textarea id="notiz" rows="4" placeholder="Was wurde gemacht?"></textarea>
+            <textarea id="notiz" rows="8" placeholder="Was wurde gemacht?"></textarea>
             <button id="main-btn" class="btn-save" onclick="save()">Speichern</button>
             <button id="cancel-btn" style="display:none; background:none; border:none; color:grey; width:100%; margin-top:10px;" onclick="resetForm()">Abbrechen</button>
-        </div>
-        <div class="card" style="background: #eee;">
-            <b>Sicherung:</b><br><br>
-            <button class="btn-tool" style="background:#6c757d" onclick="download()">💾 Backup erstellen</button>
-            <button class="btn-tool" style="background:#28a745" onclick="document.getElementById('f').click()">📥 Backup laden</button>
-            <input type="file" id="f" style="display:none" onchange="upload(event)">
         </div>
     </div>
 
@@ -143,6 +147,15 @@
         </div>
         <input type="text" id="searchBar" placeholder="Suchen..." onkeyup="render()">
         <div id="liste"></div>
+    </div>
+
+    <div id="p2" class="page">
+        <div class="card" style="background: #eee;">
+            <b>Sicherung:</b><br><br>
+            <button class="btn-tool" style="background:#6c757d" onclick="download()">💾 Backup erstellen</button>
+            <button class="btn-tool" style="background:#28a745" onclick="document.getElementById('f').click()">📥 Backup laden</button>
+            <input type="file" id="f" style="display:none" accept=".json,application/json" onchange="upload(event)">
+        </div>
     </div>
 </div>
 
@@ -171,6 +184,7 @@
                 db = e.target.result;
                 migrateOldData().then(() => {
                     render();
+                    updateArztList();
                     resolve();
                 });
             };
@@ -207,11 +221,22 @@
         });
     }
 
+    // Holt alle einzigartigen Ärztenamen aus der Datenbank und befüllt die Auswahlliste
+    async function updateArztList() {
+        const entries = await getAllEntries();
+        // Filtert Duplikate heraus und sortiert die Namen alphabetisch
+        const aerzte = [...new Set(entries.map(item => item.a).filter(Boolean))].sort();
+        const datalist = document.getElementById('arzt-liste');
+        datalist.innerHTML = aerzte.map(arzt => `<option value="${arzt}"></option>`).join('');
+    }
+
     function tabs(n) {
         document.getElementById('p0').classList.toggle('active', n === 0);
         document.getElementById('p1').classList.toggle('active', n === 1);
+        document.getElementById('p2').classList.toggle('active', n === 2);
         document.getElementById('btn0').classList.toggle('active', n === 0);
         document.getElementById('btn1').classList.toggle('active', n === 1);
+        document.getElementById('btn2').classList.toggle('active', n === 2);
         setTimeout(() => { document.getElementById('scrollContainer').scrollTop = 0; }, 10);
         if (n === 1) render();
     }
@@ -253,6 +278,8 @@
         const entry = { a, d, n };
         if (id === -1) await addEntry(entry);
         else await updateEntry(id, entry);
+        
+        await updateArztList(); // Auswahlliste nach dem Speichern aktualisieren
         resetForm();
         tabs(1);
     }
@@ -272,7 +299,10 @@
         if (confirm("Löschen?")) {
             const tx = db.transaction(STORE_NAME, "readwrite");
             tx.objectStore(STORE_NAME).delete(id);
-            tx.oncomplete = () => render();
+            tx.oncomplete = async () => {
+                render();
+                await updateArztList(); // Auswahlliste nach dem Löschen aktualisieren
+            };
         }
     }
 
@@ -307,6 +337,7 @@
                     if (!isDup) { delete item.id; await addEntry(item); neu++; }
                 }
                 alert(neu + " Einträge geladen.");
+                await updateArztList(); // Liste nach dem Backup-Import befüllen
                 render();
             } catch (err) { alert("Fehler beim Import."); }
         };
@@ -336,4 +367,3 @@
 </script>
 </body>
 </html>
-
