@@ -1,7 +1,8 @@
-const CACHE_NAME = 'medlog-cache-v1';
+const CACHE_NAME = 'Arzt-cache-v2'; // Version erhöht für Update
 const ASSETS_TO_CACHE = [
   'index.html',
   'manifest.json',
+  'Doctor-444.png', // Neues Icon hinzugefügt
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
 ];
 
@@ -40,5 +41,3 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
-
-
