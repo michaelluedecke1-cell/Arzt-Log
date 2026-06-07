@@ -6,7 +6,7 @@
     <title>MedLog Pro</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007bff">
-    <link class="apple-touch-icon" href="icon-192.png">
+    <link class="apple-touch-icon" href="Doctor-444.png">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -89,8 +89,10 @@
             box-sizing: border-box;
         }
 
+        /* MASSIVE Vergrößerung des Behandlungsfeldes */
         #notiz {
-            min-height: 180px;
+            min-height: 300px; /* Mindestens 300 Pixel hoch */
+            height: 40vh; /* Nimmt 40% der verfügbaren Bildschirmhöhe ein */
             resize: vertical;
         }
         
@@ -134,7 +136,8 @@
             <datalist id="arzt-liste"></datalist>
             
             <label>Behandlung</label>
-            <textarea id="notiz" rows="8" placeholder="Was wurde gemacht?"></textarea>
+            <textarea id="notiz" placeholder="Was wurde gemacht?"></textarea>
+            
             <button id="main-btn" class="btn-save" onclick="save()">Speichern</button>
             <button id="cancel-btn" style="display:none; background:none; border:none; color:grey; width:100%; margin-top:10px;" onclick="resetForm()">Abbrechen</button>
         </div>
@@ -221,10 +224,8 @@
         });
     }
 
-    // Holt alle einzigartigen Ärztenamen aus der Datenbank und befüllt die Auswahlliste
     async function updateArztList() {
         const entries = await getAllEntries();
-        // Filtert Duplikate heraus und sortiert die Namen alphabetisch
         const aerzte = [...new Set(entries.map(item => item.a).filter(Boolean))].sort();
         const datalist = document.getElementById('arzt-liste');
         datalist.innerHTML = aerzte.map(arzt => `<option value="${arzt}"></option>`).join('');
@@ -279,7 +280,7 @@
         if (id === -1) await addEntry(entry);
         else await updateEntry(id, entry);
         
-        await updateArztList(); // Auswahlliste nach dem Speichern aktualisieren
+        await updateArztList(); 
         resetForm();
         tabs(1);
     }
@@ -301,7 +302,7 @@
             tx.objectStore(STORE_NAME).delete(id);
             tx.oncomplete = async () => {
                 render();
-                await updateArztList(); // Auswahlliste nach dem Löschen aktualisieren
+                await updateArztList();
             };
         }
     }
@@ -337,7 +338,7 @@
                     if (!isDup) { delete item.id; await addEntry(item); neu++; }
                 }
                 alert(neu + " Einträge geladen.");
-                await updateArztList(); // Liste nach dem Backup-Import befüllen
+                await updateArztList(); 
                 render();
             } catch (err) { alert("Fehler beim Import."); }
         };
