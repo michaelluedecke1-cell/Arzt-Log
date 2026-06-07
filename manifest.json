@@ -1,6 +1,6 @@
 {
   "name": "Arzt Pro",
-  "short_name": "MedLog",
+  "short_name": "Arzt",
   "description": "Persönliches medizinisches Tagebuch",
   "start_url": "index.html",
   "display": "standalone",
